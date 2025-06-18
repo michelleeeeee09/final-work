@@ -1,14 +1,12 @@
 // google 登入範例程式碼
 // 別忘記到 auth 頁面新增服務提供商
 
-"use client"
-import { initializeApp } from "firebase/app";
+"use client";
+import { initializeApp, getApps } from "firebase/app";
 import { GoogleAuthProvider, signInWithPopup, getAuth } from "firebase/auth";
 import { useState, useEffect } from "react";
 
-
 export default function FBAuth() {
-
   const firebaseConfig = {
     apiKey: "改成你自己的",
     authDomain: "fir-demo-cc753.firebaseapp.com",
@@ -20,42 +18,40 @@ export default function FBAuth() {
     measurementId: "G-9S4KKT964F"
   };
 
-  //判斷 app 是否已經初始化過，有初始化過就使用該 app
-  const app = initializeApp(firebaseConfig, "fb-auth");
-  
-
-  const provider = new GoogleAuthProvider();
-  // provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-
   const [user, setUser] = useState(null);
+  const [auth, setAuth] = useState(null);
 
-  const auth = getAuth();
-  auth.useDeviceLanguage();
-
+  useEffect(() => {
+    // 延後初始化，避免 build 時報錯
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const authInstance = getAuth(app);
+    authInstance.useDeviceLanguage();
+    setAuth(authInstance);
+  }, []);
 
   const signIn = () => {
-    signInWithPopup(auth, provider).then((result) => {
-      console.log(result);
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential.accessToken;
-      // The signed-in user info.
-      const user = result.user;
-      console.log(user, token, credential);
-      setUser(user);
-    }).catch((error) => {
-      console.log(error);
-    });
-  }
-  
-  
+    if (!auth) return;
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        const user = result.user;
+        setUser(user);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+
   return (
-    <div className="w-full h-screen">
-      <h1>FB Auth</h1>
-      <h3>User: {user?.displayName}</h3>
-      <button onClick={() => {
-        signIn();
-      }}>Sign In</button>
+    <div className="w-full h-screen flex flex-col items-center justify-center">
+      <h1 className="text-2xl mb-4">FB Auth</h1>
+      <h3 className="mb-4">User: {user?.displayName ?? "未登入"}</h3>
+      <button
+        onClick={signIn}
+        className="px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Sign In with Google
+      </button>
     </div>
   );
 }
